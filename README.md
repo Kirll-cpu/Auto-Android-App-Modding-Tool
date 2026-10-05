@@ -162,3 +162,26 @@ Download Frida Gadget option with an active internet connection to automatically
 ---
 UAMT is intended for educational, research, and authorized testing purposes only.
 Do not use this tool on applications you do not own or have permission to modify.
+
+## Chat from GitHub
+
+This repository includes an issue-comment chat bot powered by an OpenAI-compatible AI API. It is a separate bot, **not this live Arena assistant**. It sees only `/chat` messages in the issue thread; it cannot inspect the repository or run tools.
+
+### One-time setup
+
+1. Add `.github/workflows/github-chat.yml` to the repository's **default branch** (for example, by merging this change).
+2. In **Settings → Secrets and variables → Actions**, add the repository secret `AI_API_KEY` with an API key from your AI provider. Never put the key in an issue comment or commit it to the repository.
+3. Optionally add repository variables:
+   - `AI_BASE_URL` — an OpenAI-compatible Chat Completions API base URL. Defaults to `https://api.openai.com/v1`.
+   - `AI_MODEL` — your provider's model name. Defaults to `gpt-4o-mini`.
+4. Ensure repository/org Actions policy allows the workflow's `issues: write` permission so it can post replies.
+
+### Start a chat
+
+Open a regular GitHub Issue and comment with `/chat ` followed by your message, for example:
+
+```text
+/chat How do I get started with this project?
+```
+
+The bot replies in that issue. To limit API usage, only repository owners, members, and collaborators can invoke it. The chat prompt and recent `/chat` history are sent to your configured AI provider, so do not include secrets or sensitive data. AI-provider usage may be billed by your provider.
