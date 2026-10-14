@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# UAMT workdirs (decompiled APKs, signed output)
+work/
+out/
+input/
+output/
+*.apk
+
+# Agent skills live outside the repo (installed by tools/install-skills.sh)
+skills/
