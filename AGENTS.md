@@ -14,7 +14,12 @@ tools/install-skills.sh
   workspace snapshots only persist the git repo itself, so re-run the script
   at the start of each new session/environment).
 - `tools/install-skills.sh --force` refreshes everything from upstream.
-- Index of all installed skills + trigger text: `~/skills/SKILLS-REGISTRY.md`.
+- Index of installed skills + trigger text: `~/skills/SKILLS-REGISTRY.md`.
+- The Awesome-REA reverse-engineering catalog is available at
+  `~/skills/community/Awesome-REA/README.md`, with structured data in its
+  `data/` directory. It is a resource catalog, not a skill pack or an
+  installation of the tools it links to; its full repository index includes
+  unreviewed entries. Evaluate linked material before using it.
 
 **Routing rule for agents:** when a task matches a skill's trigger text in the
 registry, read that skill's `SKILL.md` and follow its instructions/scripts.

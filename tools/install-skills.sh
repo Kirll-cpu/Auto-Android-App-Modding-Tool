@@ -67,6 +67,8 @@ install_community security-audit-skill "https://github.com/cloudflare/security-a
 install_community best-skills    "https://github.com/LinklyAI/best-skills.git"
 install_community CyberScraper-2077 "https://github.com/itsOwen/CyberScraper-2077.git"
 install_community rea "https://github.com/morluto/rea.git"
+# Reverse-engineering resource catalog (not an installer for the listed tools).
+install_community Awesome-REA "https://github.com/reacher-z/Awesome-REA.git"
 install_community flowsint "https://github.com/reconurge/flowsint.git"
 install_community universal-modder "https://github.com/rehan-remade/universal-modder.git"
 install_community 101-skills-superpowers "https://github.com/101-skills/superpowers.git"
