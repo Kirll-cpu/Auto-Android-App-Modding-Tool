@@ -8,6 +8,9 @@ set -euo pipefail
 SKILLS_DIR="${SKILLS_DIR:-$HOME/skills}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FORCE=0
+FAILED=()
+CLONED=0
+PRESENT=0
 [[ "${1:-}" == "--force" || "${1:-}" == "-f" ]] && FORCE=1
 
 c_info() { printf '\033[1;36m[skills]\033[0m %s\n' "$*"; }
@@ -23,33 +26,63 @@ case "$SKILLS_DIR" in
     ;;
 esac
 
-if [[ $FORCE -eq 1 && -d "$SKILLS_DIR" ]]; then
-  c_info "--force: removing existing $SKILLS_DIR"
-  rm -rf "$SKILLS_DIR"
+# Never recursively delete an arbitrary pre-existing directory, even if a
+# caller passes it as SKILLS_DIR. Only directories created by this script carry
+# the marker; symlinked roots are never eligible for deletion.
+if [[ $FORCE -eq 1 && ( -e "$SKILLS_DIR" || -L "$SKILLS_DIR" ) ]]; then
+  if [[ -L "$SKILLS_DIR" || ! -f "$SKILLS_DIR/.uamt-skills-root" ]]; then
+    c_err "--force refused: skills root is a symlink or lacks .uamt-skills-root"
+    exit 1
+  fi
+  c_info "--force: removing managed skills directory $SKILLS_DIR"
+  rm -rf -- "$SKILLS_DIR"
+fi
+if [[ ! -e "$SKILLS_DIR" && ! -L "$SKILLS_DIR" ]]; then
+  mkdir -p "$SKILLS_DIR"
+  : > "$SKILLS_DIR/.uamt-skills-root"
 fi
 
+# Clone into a temporary sibling so a failed clone is never mistaken for an
+# installed repository on the next run. These are sources, not installed apps.
 install_official() {
   if [[ -d "$SKILLS_DIR/skills" ]]; then
-    c_info "official skills present — skipped"
+    c_info "official skills directory present — skipped (not verified)"
+    PRESENT=$((PRESENT + 1))
     return
   fi
   local tmp
   tmp="$(mktemp -d)"
   c_info "cloning anthropics/skills"
-  git clone --depth 1 --quiet "https://github.com/anthropics/skills.git" "$tmp/repo"
-  mkdir -p "$SKILLS_DIR"
-  cp -a "$tmp/repo/." "$SKILLS_DIR/"
+  if git clone --depth 1 --quiet "https://github.com/anthropics/skills.git" "$tmp/repo" && [[ -d "$tmp/repo/skills" ]]; then
+    rm -rf "$tmp/repo/.git"
+    mkdir -p "$SKILLS_DIR"
+    cp -a "$tmp/repo/." "$SKILLS_DIR/"
+    CLONED=$((CLONED + 1))
+  else
+    c_err "official skills clone failed or missing skills directory"
+    FAILED+=("anthropics/skills")
+  fi
   rm -rf "$tmp"
 }
 
 install_community() {
-  local name="$1" url="$2" dest="$SKILLS_DIR/community/$1"
+  local name="$1" url="$2" dest="$SKILLS_DIR/community/$1" tmp
   if [[ -d "$dest" ]]; then
-    c_info "$name present — skipped"
+    c_info "$name present — skipped (not verified)"
+    PRESENT=$((PRESENT + 1))
     return
   fi
   c_info "cloning $url"
-  git clone --depth 1 --quiet "$url" "$dest"
+  tmp="$(mktemp -d "$SKILLS_DIR/community/.clone-$name.XXXXXX")"
+  if git clone --depth 1 --quiet "$url" "$tmp/repo"; then
+    rm -rf "$tmp/repo/.git"
+    mv "$tmp/repo" "$dest"
+    CLONED=$((CLONED + 1))
+  else
+    c_err "$name clone failed"
+    FAILED+=("$name")
+  fi
+  rm -rf "$tmp"
 }
 
 install_official
@@ -93,13 +126,19 @@ install_community VirtualXP "https://github.com/lrusso/VirtualXP.git"
 install_community PC-Free "https://github.com/jephersonRD/PC-Free.git"
 install_community SpaceCore "https://github.com/FSpaceCore/SpaceCore.git"
 install_community BlackBox "https://github.com/FBlackBox/BlackBox.git"
-c_info "stripping nested .git metadata"
-find "$SKILLS_DIR" -name ".git" -prune -exec rm -rf {} + 2>/dev/null || true
-
 if command -v python3 >/dev/null 2>&1 && [[ -f "$SCRIPT_DIR/skills_registry.py" ]]; then
   c_info "building SKILLS-REGISTRY.md"
   python3 "$SCRIPT_DIR/skills_registry.py" "$SKILLS_DIR"
+else
+  c_err "python3 or skills_registry.py unavailable — registry not generated"
+  FAILED+=("registry")
 fi
 
-total="$(find "$SKILLS_DIR" -name 'SKILL.md' | wc -l | tr -d ' ')"
-c_ok "done — $total SKILL.md files under $SKILLS_DIR 🎉"
+total="$(find "$SKILLS_DIR" -name 'SKILL.md' -type f | wc -l | tr -d ' ')"
+c_info "sources: $CLONED cloned, $PRESENT already present (not verified), ${#FAILED[@]} failed"
+c_info "discovered $total SKILL.md files; source presence does not mean dependencies are installed"
+if (( ${#FAILED[@]} )); then
+  c_err "failed: ${FAILED[*]}"
+  exit 1
+fi
+c_ok "source provisioning complete 🎉"
